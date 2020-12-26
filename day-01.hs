@@ -21,7 +21,7 @@ testPartOne expenses answer = product == answer
 
 actualExpenses :: IO [Int]
 actualExpenses = do
-    expenses <- fmap Text.lines (Text.readFile "day-01.txt")
+    expenses <- fmap Text.lines (Text.readFile "data-day-01.txt")
     return $ fmap (read . Text.unpack) expenses
 
 findTwoExpensesThatSumToTwentyTwenty :: [Int] -> Maybe (Int, Int)
