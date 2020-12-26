@@ -21,18 +21,18 @@ exampleData = [
 
 -- Solution
 
-checkPolicy :: PasswordCheck -> Bool 
-checkPolicy passwordCheck = min <= occurrances && occurrances <= max
+checkPolicyPartOne :: PasswordCheck -> Bool 
+checkPolicyPartOne passwordCheck = min <= occurrances && occurrances <= max
     where psw = password passwordCheck
           min = minimumOccurrance passwordCheck
           max = maximumOccurrance passwordCheck
           ch = character passwordCheck
           occurrances = Text.length $ Text.filter (== ch) psw
 
-count :: [PasswordCheck] -> (Int, Int, Int)
-count passwordChecks = (length valid, length invalid, length passwordChecks)
-    where valid = filter checkPolicy passwordChecks
-          invalid = filter (not . checkPolicy) passwordChecks
+countPartOne :: [PasswordCheck] -> (Int, Int, Int)
+countPartOne passwordChecks = (length valid, length invalid, length passwordChecks)
+    where valid = filter checkPolicyPartOne passwordChecks
+          invalid = filter (not . checkPolicyPartOne) passwordChecks
 
 readCheck :: Text.Text -> PasswordCheck
 readCheck input = PasswordCheck {
@@ -52,3 +52,20 @@ readActualPasswordChecks :: IO [PasswordCheck]
 readActualPasswordChecks = do
     passwordCheckText <- fmap Text.lines (Text.readFile "data-day-02.txt")
     return $ readCheck <$> passwordCheckText
+
+-- Part Two
+
+checkPolicyPartTwo :: PasswordCheck -> Bool 
+checkPolicyPartTwo passwordCheck = (matchFirst && not matchSecond) || (not matchFirst && matchSecond)
+    where psw = password passwordCheck
+          first = minimumOccurrance passwordCheck
+          second = maximumOccurrance passwordCheck
+          ch = character passwordCheck
+          matchFirst = (== ch) $ Text.last $ Text.take first psw
+          matchSecond = (== ch) $ Text.last $ Text.take second psw
+
+countPartTwo :: [PasswordCheck] -> (Int, Int, Int)
+countPartTwo passwordChecks = (length valid, length invalid, length passwordChecks)
+    where valid = filter checkPolicyPartTwo passwordChecks
+          invalid = filter (not . checkPolicyPartTwo) passwordChecks
+
