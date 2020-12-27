@@ -73,7 +73,7 @@ countActualValidIndividuals = do
     return $ length $ filter validateIndividual $ loadData actual [] newIndividual
 
 readActual :: IO [Text.Text]
-readActual = Text.lines <$> Text.readFile "data-day-04.txt"
+readActual = Text.lines <$> Text.readFile "./data/data-day-04.txt"
     
 -- Part Two
 

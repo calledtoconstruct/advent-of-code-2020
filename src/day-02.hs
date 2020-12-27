@@ -50,7 +50,7 @@ readCheck input = PasswordCheck {
 
 readActualPasswordChecks :: IO [PasswordCheck]
 readActualPasswordChecks = do
-    passwordCheckText <- fmap Text.lines (Text.readFile "data-day-02.txt")
+    passwordCheckText <- fmap Text.lines (Text.readFile "./data/data-day-02.txt")
     return $ readCheck <$> passwordCheckText
 
 -- Part Two

@@ -48,7 +48,7 @@ traverseBoard board currentLocation stepToTake currentNumberOfTrees
           nextNumberOfTrees = currentNumberOfTrees + if onTree then 1 else 0
 
 readActual :: IO [[Char]]
-readActual = fmap Text.unpack . Text.lines <$> Text.readFile "data-day-03.txt"
+readActual = fmap Text.unpack . Text.lines <$> Text.readFile "./data/data-day-03.txt"
 
 traversePartOneActual :: IO Int 
 traversePartOneActual = do
