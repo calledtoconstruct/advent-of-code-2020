@@ -1,5 +1,7 @@
-import Data.Text as Text
-import Data.Text.IO as Text
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
+import Data.List (sort)
+import Data.Maybe (fromJust)
 
 -- The first 7 characters will either be F or B; these specify exactly one of 
 -- the 128 rows on the plane (numbered 0 through 127). Each letter tells you
@@ -110,3 +112,38 @@ testSplitBoardingPass = splitBoardingPass $ Text.pack "FBFBBFFRLR"
 
 readBoardingPasses :: IO [Text.Text]
 readBoardingPasses = Text.lines <$> Text.readFile "./data/data-day-05.txt"
+
+-- Part Two
+
+orderIdentities :: [MaybeIdentity] -> [MaybeIdentity]
+orderIdentities = sort
+
+--  [3, 4, 5, 6, 8, 9]
+--  [3, 4, 5] = 2           [6, 8, 9] = 3
+--  [6, 8, 9]
+--  [6, 8] = 2              [ 8, 9] = 1
+--  (6, 8) => answer 7
+
+missing :: [MaybeIdentity] -> MaybeIdentity
+missing [x, y] = Just $ div (fromJust x + fromJust y) 2
+missing identities
+    | lowerSpread > upperSpread = missing lower
+    | lowerSpread < upperSpread = missing upper
+    | otherwise = missing [last lower, head upper]
+    where lower = take lowerEnd identities
+          upper = drop upperStart identities
+          lowerEnd = flip div 2 $ identitiesLength + 1
+          upperStart = div identitiesLength 2
+          identitiesLength = length identities
+          lowerMinimum = head lower
+          lowerMaximum = last lower
+          upperMinimum = head upper
+          upperMaximum = last upper
+          lowerSpread = fromJust lowerMaximum - fromJust lowerMinimum
+          upperSpread = fromJust upperMaximum - fromJust upperMinimum
+
+partTwo :: IO MaybeIdentity
+partTwo = do
+    boardingPasses <- readBoardingPasses
+    let ordered = orderIdentities $ calculateIdentity . collapseRange . apply . splitBoardingPass <$> boardingPasses
+    return $ missing ordered
