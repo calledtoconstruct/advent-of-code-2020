@@ -5,7 +5,7 @@ sudo nix-env -i cabal-install
 sudo nix-env -iA nixpkgs.binutils-unwrapped
 sudo nix-env -i gnome-keyring
 cabal update
-cabal new-install --lib sort text split Unique
+cabal new-install --lib sort text split Unique extra
 ```
 
 In VSCode install the following extension:
