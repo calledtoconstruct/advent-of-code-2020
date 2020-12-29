@@ -156,12 +156,12 @@ calculateOffsets adapters offsets
 
 calculatePermutations :: [Int] -> Int -> Int -> Int
 calculatePermutations offsets permutations streak
-    | null offsets && streak > 1        = nextPermutations
+    | null offsets && streak > 0        = nextPermutations
     | null offsets                      = permutations
     | head offsets == 1                 = calculatePermutations nextOffsets permutations nextStreak
-    | head offsets == 3 && streak > 1   = calculatePermutations nextOffsets nextPermutations 0
+    | head offsets == 3 && streak > 0   = calculatePermutations nextOffsets nextPermutations 0
     | otherwise                         = calculatePermutations nextOffsets permutations 0
-    where multiplyBy = multiplier (streak - 2) [7, 4, 2]
+    where multiplyBy = multiplier (streak - 1) [4, 2, 1]
           nextOffsets = tail offsets
           nextPermutations = permutations * multiplyBy
           nextStreak = streak + 1
