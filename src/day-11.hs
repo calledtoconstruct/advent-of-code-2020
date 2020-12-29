@@ -60,26 +60,24 @@ surrounding location = [
     southWest location, south location, southEast location
     ]
 
-shouldSit :: Map -> Location -> Bool 
-shouldSit map location
+shouldSit :: [Char] -> Map -> Location -> Bool 
+shouldSit surroundedBy map location
     | isOccupied current = False
     | isFloor current = False
     | isAvailable current && occupied == 0 = True
     | otherwise = False
     where current = get map location
           (x, y) = location
-          surroundedBy = get map <$> surrounding location
           occupied = length $ filter isOccupied surroundedBy
 
-shouldStand :: Map -> Location -> Bool 
-shouldStand map location
+shouldStand :: [Char] -> Map -> Location -> Int -> Bool 
+shouldStand surroundedBy map location tolerance
     | (not . isOccupied) current = False
     | isFloor current = False
-    | (not . isAvailable) current && occupied > 3 = True
+    | (not . isAvailable) current && occupied >= tolerance = True
     | otherwise = False
     where current = get map location
           (x, y) = location
-          surroundedBy = get map <$> surrounding location
           occupied = length $ filter isOccupied surroundedBy
 
 next :: (Int, Int) -> Location -> Location
@@ -99,15 +97,20 @@ update (mapData, size) (x, y) to = (rowsBefore ++ [updated] ++ rowsAfter, size)
           rowsBefore = take y mapData
           rowsAfter = drop (y + 1) mapData
 
-walk :: Map -> Map -> Location -> Map
-walk currentMap nextMap location
+surroundingSeats :: Map -> Location -> [Char]
+surroundingSeats map location = get map <$> surrounding location
+
+walk :: (Map -> Location -> [Char]) -> Map -> Map -> Location -> Int -> Map
+walk surrounding currentMap nextMap location tolerance
     | not isInbounds && currentMap == nextMap = nextMap
-    | not isInbounds = walk nextMap nextMap (0, 0)
-    | shouldSit currentMap location = walk currentMap (update nextMap location '#') $ next size location 
-    | shouldStand currentMap location = walk currentMap (update nextMap location 'L') $ next size location 
-    | otherwise = walk currentMap nextMap $ next size location
+    | not isInbounds = walk surrounding nextMap nextMap (0, 0) tolerance
+    | shouldSit surroundedBy currentMap location = walk surrounding currentMap (update nextMap location '#') nextLocation tolerance
+    | shouldStand surroundedBy currentMap location tolerance = walk surrounding currentMap (update nextMap location 'L') nextLocation tolerance
+    | otherwise = walk surrounding currentMap nextMap nextLocation tolerance
     where (mapData, size) = currentMap
           isInbounds = inbounds size location
+          surroundedBy = surrounding currentMap location
+          nextLocation = next size location
 
 loadMap :: IO Map
 loadMap = do
@@ -117,7 +120,37 @@ loadMap = do
 partOne :: IO Int
 partOne = do
     map <- loadMap
-    let (mapData, _) = walk map map (0, 0)
+    let (mapData, _) = walk surroundingSeats map map (0, 0) 4
     let seated = Text.concat $ Text.filter (== '#') <$> mapData
     return $ Text.length seated
-    
+
+-- Part Two
+
+look :: (Location -> Location) -> Map -> Location -> Char
+look direction map location
+    | not $ inbounds size location = '.'
+    | isOccupied current = current
+    | isAvailable current = current
+    | otherwise = look direction map next
+    where (_, size) = map
+          next = direction location
+          current = get map next
+
+lineOfSight :: Map -> Location -> [Char]
+lineOfSight map location = found
+    where nw = look northWest map location
+          n = look north map location
+          ne = look northEast map location
+          w = look west map location
+          e = look east map location
+          sw = look southWest map location
+          s = look south map location
+          se = look southEast map location
+          found = [nw, n, ne, w, e, sw, s, se]
+
+partTwo :: IO Int
+partTwo = do
+    map <- loadMap
+    let (mapData, _) = walk lineOfSight map map (0, 0) 5
+    let seated = Text.concat $ Text.filter (== '#') <$> mapData
+    return $ Text.length seated
