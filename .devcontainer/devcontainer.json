@@ -1,5 +1,5 @@
 {
-    "name": "GHC 8.6.5 with HIE",
+    "name": "GHC 8.6.5 with Haskell Language Server and ghcide",
     "dockerFile": "Dockerfile",
     "runArgs": [],
 
@@ -21,6 +21,6 @@
     
     // Add the IDs of extensions you want installed when the container is created in the array below.
     "extensions": [
-        "alanz.vscode-hie-server"
+        "haskell.haskell"
     ]
 }
