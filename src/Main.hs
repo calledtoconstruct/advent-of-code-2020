@@ -1,4 +1,9 @@
 module Main where
 
+import DayThirteen (Time, partTwo)
+
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+    putStrLn "Hello, Haskell!"
+    value <- partTwo
+    print value
