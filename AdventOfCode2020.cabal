@@ -26,7 +26,8 @@ executable AdventOfCode2020
                       text,
                       split,
                       Unique,
-                      extra
+                      extra,
+                      containers
   hs-source-dirs:     "src"
   default-language:    Haskell2010
 
