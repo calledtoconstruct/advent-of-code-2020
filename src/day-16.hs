@@ -2,16 +2,18 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Read as Text
 import Data.Either (fromRight)
+import Data.Maybe (fromJust)
+import Data.List (sortOn)
 
 data Range = Range {
     lower :: Int,
     upper :: Int
-} deriving (Show)
+} deriving (Show, Eq)
 
 data Rule = Rule {
     name :: Text.Text,
     ranges :: [Range]
-} deriving (Show)
+} deriving (Show, Eq)
 
 newtype Ticket = Ticket {
     values :: [Int]
@@ -68,7 +70,7 @@ readData (rules, tickets, readState) instructions
 ticketNumbers :: [Ticket] -> [Int]
 ticketNumbers tickets = concat $ values <$> tickets
 
-applyRange :: Int -> Range -> Bool 
+applyRange :: Int -> Range -> Bool
 applyRange ticketNumber range = lower range <= ticketNumber && ticketNumber <= upper range
 
 applyRule :: Int -> Rule -> Bool
@@ -78,10 +80,12 @@ applyRules :: [Rule] -> Int -> Bool
 applyRules rules ticketNumber = or $ applyRule ticketNumber <$> rules
 
 invalid :: [Rule] -> [Ticket] -> [Int]
-invalid rules tickets = filter (not . applyRules rules) $ concat  $ values <$> tickets
+invalid rules tickets = filter (not . applyRules rules) $ concat $ values <$> tickets
 
 errorRate :: [Int] -> Int
 errorRate = sum
+
+-- Part One
 
 partOneSampleData :: [Text.Text]
 partOneSampleData = [
@@ -112,4 +116,58 @@ partOne = do
     let (rules, ticketNumbers) = readData ([], [], initialReadState) trainTickets
     return $ errorRate $ invalid rules $ init ticketNumbers
 
+-- Part Two
 
+partTwoSampleData :: [Text.Text]
+partTwoSampleData = [
+    Text.pack "class: 0-1 or 4-19",
+    Text.pack "row: 0-5 or 8-19",
+    Text.pack "seat: 0-13 or 16-19",
+    Text.pack "",
+    Text.pack "your ticket:",
+    Text.pack "11,12,13",
+    Text.pack "",
+    Text.pack "nearby tickets:",
+    Text.pack "3,9,18",
+    Text.pack "15,1,5",
+    Text.pack "5,14,9"
+    ]
+
+validTickets :: [Rule] -> [Ticket] -> [Ticket]
+validTickets rules = filter (all (applyRules rules) . values)
+
+column :: [Ticket] -> Int -> [Int]
+column tickets number = map (\ticket -> values ticket !! number) tickets
+
+validRules :: [Rule] -> [Int] -> [Rule]
+validRules rules ticketNumbers = filter (\rule -> all (`applyRule` rule) ticketNumbers) rules
+
+collectOptions :: [Rule] -> [Ticket] -> Int -> [(Int, [Rule])]
+collectOptions rules tickets numberOfColumns = sortOn (length . snd) options
+    where ticketNumbers = map (\columnNumber -> (columnNumber, column tickets columnNumber)) [0..numberOfColumns - 1]
+          options = map (\columnNumber -> (columnNumber, validRules rules (fromJust $ lookup columnNumber ticketNumbers))) [0..numberOfColumns - 1]
+
+uniqueOptions :: [(Int, Rule)] -> [(Int, [Rule])] -> [(Int, Rule)]
+uniqueOptions found options
+    | null options = found
+    | otherwise = uniqueOptions (option: found) (tail options)
+    where (column, rules) = head options
+          foundRules = snd <$> found
+          option = (column, head $ filter (`notElem` foundRules) rules)
+
+testPartTwo :: [(Int, Rule)]
+testPartTwo = filter (Text.isPrefixOf (Text.pack "cla") . name . snd) options
+    where (rules, allTickets) = readData ([], [], initialReadState) partTwoSampleData
+          tickets = validTickets rules $ init allTickets
+          options = uniqueOptions [] $ collectOptions rules tickets $ length (values $ last allTickets)
+
+partTwo :: IO Int
+partTwo = do
+    trainTickets <- loadData
+    let (rules, allTickets) = readData ([], [], initialReadState) trainTickets
+    let ticket = last allTickets
+    let columns = values ticket
+    let tickets = validTickets rules $ init allTickets
+    let options = uniqueOptions [] $ collectOptions rules tickets $ length (values ticket)
+    let departures = filter (Text.isPrefixOf (Text.pack "departure") . name . snd) options
+    return $ product $ map (columns !!) $ fst <$> departures
