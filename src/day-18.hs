@@ -28,9 +28,9 @@ readOperand memory digit = case operation memory of
     _        -> memory { rightOperand = rightOperand memory * 10 + digitToInt digit }
 
 saveResult :: Memory -> Operand -> Memory
-saveResult memory operand = case operation memory of
-    Unknown  -> memory { leftOperand = operand }
-    _        -> memory { rightOperand = operand }
+saveResult memory value = case operation memory of
+    Unknown  -> memory { leftOperand = value }
+    _        -> memory { rightOperand = value }
 
 nextOperation :: Memory -> Operation -> Memory
 nextOperation memory newOperation = case operation memory of
@@ -79,39 +79,50 @@ partOne = do
     expressions <- Text.lines <$> Text.readFile "./data/data-day-18.txt"
     return $ sum $ evaluateExpression newMemory <$> expressions
 
-data Next = LeftOperand | EndOfLeftOperand | Plus | RightOperand | EndOfRightOperand deriving (Eq)
+data LookingFor = LeftOperand | EndOfLeftOperand | Plus | RightOperand | EndOfRightOperand deriving (Eq)
+data OperandType = Number | Expression | NotFound
 
-reprioritize :: Next -> Int -> Int -> Text.Text -> (Int, Text.Text)
-reprioritize lookingFor positionOfLeftOperand positionOfEvaluation expression
-    | lookingFor == EndOfRightOperand && positionOfEvaluation >= Text.length expression = (positionOfEvaluation, prioritizedExpression )
-    | lookingFor == EndOfLeftOperand && positionOfEvaluation >= Text.length expression = (Text.length expression, expression)
+operandAt :: Text.Text -> Int -> Maybe OperandType
+operandAt expression at
+    | current `elem` ['0'..'9'] = Just Number
+    | current == '(' = Just Expression
+    | otherwise = Nothing
+    where current = Text.index expression at
 
-    | positionOfEvaluation >= Text.length expression = (Text.length expression, expression)
+reprioritize :: LookingFor -> Int -> Int -> Text.Text -> (Int, Text.Text)
+reprioritize LeftOperand positionOfLeftOperand positionOfEvaluation expression = case operandAt expression positionOfEvaluation of
+    Just Number     -> reprioritize EndOfLeftOperand positionOfEvaluation (positionOfEvaluation + 1) expression
+    Just Expression -> uncurry (reprioritize EndOfLeftOperand positionOfEvaluation) recursed
+    Nothing         -> reprioritize LeftOperand positionOfLeftOperand (positionOfEvaluation + 1) expression
+    where recursed = reprioritize LeftOperand (positionOfEvaluation + 1) (positionOfEvaluation + 1) expression
 
-    | lookingFor == LeftOperand && elem current ['0'..'9'] = reprioritize EndOfLeftOperand positionOfEvaluation (positionOfEvaluation + 1) expression
-    | lookingFor == EndOfLeftOperand && current == ' ' = reprioritize Plus positionOfLeftOperand (positionOfEvaluation + 1) expression
-    | lookingFor == Plus && current == '+' = reprioritize RightOperand positionOfLeftOperand (positionOfEvaluation + 1) expression
-    | lookingFor == Plus && current == '*' = reprioritize LeftOperand positionOfEvaluation (positionOfEvaluation + 1) expression
+reprioritize EndOfLeftOperand positionOfLeftOperand positionOfEvaluation expression = if positionOfEvaluation < Text.length expression
+    then case Text.index expression positionOfEvaluation of
+        ' ' -> uncurry (reprioritize Plus positionOfLeftOperand) result
+        ')' -> result
+    else result
+    where result = (positionOfEvaluation + 1, expression)
 
-    | lookingFor == RightOperand && elem current ['0'..'9'] = reprioritize EndOfRightOperand positionOfLeftOperand (positionOfEvaluation + 1) expression
-    | lookingFor == EndOfRightOperand && current == ' ' = reprioritize Plus positionOfLeftOperand (positionOfEvaluation + 3) prioritizedExpression
+reprioritize Plus positionOfLeftOperand positionOfEvaluation expression = case Text.index expression positionOfEvaluation of
+    '+' -> reprioritize RightOperand positionOfLeftOperand (positionOfEvaluation + 1) expression
+    '*' -> reprioritize LeftOperand positionOfEvaluation (positionOfEvaluation + 1) expression
 
-    | lookingFor == LeftOperand && current == '(' = reprioritize EndOfLeftOperand positionOfEvaluation (recursedEnd + 1) recursedExpression
-    | lookingFor == EndOfLeftOperand && current == ')' = (positionOfEvaluation, expression)
+reprioritize RightOperand positionOfLeftOperand positionOfEvaluation expression = case operandAt expression positionOfEvaluation of
+    Just Number     -> reprioritize EndOfRightOperand positionOfLeftOperand (positionOfEvaluation + 1) expression
+    Just Expression -> uncurry (reprioritize EndOfRightOperand positionOfLeftOperand) recursed
+    Nothing         -> reprioritize RightOperand positionOfLeftOperand (positionOfEvaluation + 1) expression
+    where recursed = reprioritize LeftOperand (positionOfEvaluation + 1) (positionOfEvaluation + 1) expression
 
-    | lookingFor == RightOperand && current == '(' = reprioritize EndOfRightOperand positionOfLeftOperand (recursedEnd + 1) recursedExpression
-    | lookingFor == EndOfRightOperand && current == ')' = (positionOfEvaluation + 2, prioritizedExpression)
+reprioritize EndOfRightOperand positionOfLeftOperand positionOfEvaluation expression = if positionOfEvaluation < Text.length expression
+    then case Text.index expression positionOfEvaluation of
+        ' ' -> uncurry (reprioritize Plus positionOfLeftOperand) result
+        ')' -> result
+    else result
+    where result = (positionOfEvaluation + 3, prioritize expression positionOfLeftOperand positionOfEvaluation)
 
-    | otherwise = reprioritize lookingFor positionOfLeftOperand (positionOfEvaluation + 1) expression
-    where preExpression = Text.take positionOfLeftOperand expression
-          priorityExpression = Text.take (positionOfEvaluation - positionOfLeftOperand) $ Text.drop positionOfLeftOperand expression
-          postExpression = Text.drop positionOfEvaluation expression
-          current = Text.index expression positionOfEvaluation
-          prioritized = Text.concat [Text.pack "(", priorityExpression, Text.pack ")"]
-          prioritizedExpression = Text.concat [preExpression, prioritized, postExpression]
-          recursed = reprioritize LeftOperand (positionOfEvaluation + 1) (positionOfEvaluation + 1) expression
-          recursedEnd = fst recursed
-          recursedExpression = snd recursed
+prioritize :: Text.Text -> Int -> Int -> Text.Text
+prioritize expression begin end = Text.concat [Text.take begin expression, prioritized, Text.drop end expression]
+    where prioritized = Text.concat [Text.pack "(", Text.take (end - begin) $ Text.drop begin expression, Text.pack ")"]
 
 testPartTwo :: [Bool]
 testPartTwo = [
